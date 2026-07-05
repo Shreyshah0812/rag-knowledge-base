@@ -1,0 +1,41 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-multipart==0.0.9
+
+# PDF parsing
+PyMuPDF==1.24.10
+pdfplumber==0.11.4
+
+# Chunking
+langchain-text-splitters==0.3.0
+
+# Storage
+psycopg[binary]==3.2.2
+qdrant-client==1.11.1
+
+# Embeddings / generation
+openai==1.51.0
+anthropic==0.34.2
+
+# Reranking
+cohere==5.9.4
+
+# Eval
+ragas==0.1.20
+datasets==2.21.0
+pandas==2.2.2
+
+# Frontend
+streamlit==1.38.0
+requests==2.32.3
+
+# Testing
+pytest==8.3.3
+pytest-asyncio==0.24.0
+httpx==0.27.2
+
+# Utilities
+python-dotenv==1.0.1
+tenacity==9.0.0

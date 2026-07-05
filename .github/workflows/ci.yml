@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run unit tests
+        run: pytest tests/unit -v
+
+  integration-and-eval:
+    runs-on: ubuntu-latest
+    needs: unit-tests
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: rag
+          POSTGRES_PASSWORD: rag
+          POSTGRES_DB: rag_kb
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U rag"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+      qdrant:
+        image: qdrant/qdrant:latest
+        ports: ["6333:6333"]
+    env:
+      DATABASE_URL: postgresql://rag:rag@localhost:5432/rag_kb
+      QDRANT_URL: http://localhost:6333
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Apply DB schema
+        run: psql "$DATABASE_URL" -f scripts/init_db.sql
+      - name: Start API
+        run: |
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+      - name: Run integration tests
+        run: pytest tests/integration -v
+      - name: Run evaluation and enforce quality gate
+        run: |
+          python -m app.eval.run_eval --api-url http://localhost:8000
+          python - <<'EOF'
+          import json, glob, sys
+          latest = sorted(glob.glob("eval_results/*.json"))[-1]
+          with open(latest) as f:
+              summary = json.load(f)
+          MIN_RECALL = 0.7
+          MIN_DECLINE_ACCURACY = 0.8
+          failed = []
+          if summary["avg_recall_at_5"] < MIN_RECALL:
+              failed.append(f"Recall@5 {summary['avg_recall_at_5']:.2f} < {MIN_RECALL}")
+          if summary["decline_accuracy"] < MIN_DECLINE_ACCURACY:
+              failed.append(f"Decline accuracy {summary['decline_accuracy']:.2f} < {MIN_DECLINE_ACCURACY}")
+          if failed:
+              print("EVAL GATE FAILED:\n" + "\n".join(failed))
+              sys.exit(1)
+          print("Eval gate passed.")
+          EOF
+      - name: Upload eval results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval_results/
