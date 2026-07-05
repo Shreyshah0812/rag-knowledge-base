@@ -52,7 +52,7 @@ jobs:
         run: pip install -r requirements.txt
       - name: Apply DB schema
         run: psql "$DATABASE_URL" -f scripts/init_db.sql
-      -name: Start API
+      - name: Start API
         run: |
           PYTHONPATH=. nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
           for i in $(seq 1 15); do
