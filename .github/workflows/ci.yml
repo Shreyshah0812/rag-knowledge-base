@@ -43,6 +43,7 @@ jobs:
       QDRANT_URL: http://localhost:6333
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
+      RAW_FILE_STORAGE_DIR: ./uploads_data
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
