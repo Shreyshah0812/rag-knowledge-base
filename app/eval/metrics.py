@@ -2,13 +2,13 @@
 Metrics per BLUEPRINT.md §8:
 - Retrieval: Recall@5, MRR (computed both pre-rerank and post-rerank so the
   reranker's actual contribution is quantifiable -- see resume bullet #1).
-- Generation: Ragas faithfulness / answer_relevancy / context_relevancy.
+- Generation: Ragas faithfulness / answer_relevancy / context_precision.
 - Citation correctness: custom metric (not in Ragas) -- % of [Source N] citations
   whose cited chunk actually contains the claim.
 """
 from datasets import Dataset
 from ragas import evaluate
-from ragas.metrics import faithfulness, answer_relevancy, context_relevancy
+from ragas.metrics import faithfulness, answer_relevancy, context_precision
 
 
 def recall_at_k(retrieved_chunk_ids: list[str], expected_chunk_ids: list[str]) -> float:
@@ -36,7 +36,7 @@ def run_ragas_eval(records: list[dict]) -> dict:
     dataset = Dataset.from_list(records)
     result = evaluate(
         dataset,
-        metrics=[faithfulness, answer_relevancy, context_relevancy],
+        metrics=[faithfulness, answer_relevancy, context_precision],
     )
     return result
 
