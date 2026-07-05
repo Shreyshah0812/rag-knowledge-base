@@ -52,10 +52,19 @@ jobs:
         run: pip install -r requirements.txt
       - name: Apply DB schema
         run: psql "$DATABASE_URL" -f scripts/init_db.sql
-      - name: Start API
+      -name: Start API
         run: |
-          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
+          PYTHONPATH=. nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
+          for i in $(seq 1 15); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "API is up"
+              break
+            fi
+            echo "Waiting for API... ($i)"
+            sleep 2
+          done
+          echo "----- uvicorn.log -----"
+          cat uvicorn.log
       - name: Run integration tests
         run: pytest tests/integration -v
       - name: Run evaluation and enforce quality gate
