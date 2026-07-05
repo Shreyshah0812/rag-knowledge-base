@@ -55,6 +55,8 @@ jobs:
         run: psql "$DATABASE_URL" -f scripts/init_db.sql
       - name: Start API, run integration tests, and run eval
         run: |
+          set +e
+          
           PYTHONPATH=. nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
           API_PID=$!
 
