@@ -6,6 +6,7 @@ anywhere that isn't also written here first.
 """
 import psycopg
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 from contextlib import contextmanager
 
 from app.config import settings
@@ -120,6 +121,11 @@ def get_chunks_by_ids(chunk_ids: list[str]) -> list[dict]:
 def insert_query_log(log: dict) -> str:
     with get_conn() as conn:
         with conn.cursor() as cur:
+            params = {
+                **log,
+                "rerank_scores": Jsonb(log["rerank_scores"]),
+                "citations": Jsonb(log["citations"]),
+            }
             cur.execute(
                 """
                 INSERT INTO query_logs
@@ -133,7 +139,7 @@ def insert_query_log(log: dict) -> str:
                         %(latency_ms)s)
                 RETURNING log_id
                 """,
-                log,
+                params,
             )
             return str(cur.fetchone()["log_id"])
 
