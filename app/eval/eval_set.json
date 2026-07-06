@@ -1,86 +1,77 @@
 {
-  "_readme": "Example structure per BLUEPRINT.md §8. Expand to 30-50 questions against your actual corpus before trusting the metrics. 'expected_chunk_ids' must be filled in with real chunk_ids from your Postgres 'chunks' table after you've ingested your documents -- run a query like `SELECT chunk_id, text FROM chunks WHERE doc_title = '...' AND page_number = N;` to find them.",
+  "_readme": "Matches tests/fixtures/sample_policy.pdf (a fake Acme Corp employee handbook). Recall/MRR are computed by checking whether 'expected_keywords' phrases appear in the text of retrieved chunks -- NOT by matching chunk_id, since chunk_ids are randomly generated UUIDs that differ every time the corpus is re-ingested (e.g. a fresh CI database each run). This makes the eval set portable across any environment as long as the same fixture PDF is ingested first.",
   "questions": [
     {
       "id": "q1",
       "category": "answerable",
       "question": "What is the maximum number of paid sick days per year?",
-      "expected_answer_contains": "sick days",
-      "expected_chunk_ids": ["REPLACE_WITH_REAL_CHUNK_ID"],
+      "expected_keywords": ["10 paid sick days"],
       "should_decline": false
     },
     {
       "id": "q2",
       "category": "answerable",
       "question": "How many vacation days do full-time employees get in their first year?",
-      "expected_answer_contains": "vacation",
-      "expected_chunk_ids": ["REPLACE_WITH_REAL_CHUNK_ID"],
+      "expected_keywords": ["15 vacation days"],
       "should_decline": false
     },
     {
       "id": "q3",
       "category": "answerable",
-      "question": "What is the process for submitting an expense reimbursement?",
-      "expected_answer_contains": "reimbursement",
-      "expected_chunk_ids": ["REPLACE_WITH_REAL_CHUNK_ID"],
+      "question": "What is the process for submitting an expense for reimbursement?",
+      "expected_keywords": ["Finance portal"],
       "should_decline": false
     },
     {
       "id": "q4",
       "category": "answerable",
       "question": "What is the notice period required for resignation?",
-      "expected_answer_contains": "notice period",
-      "expected_chunk_ids": ["REPLACE_WITH_REAL_CHUNK_ID"],
+      "expected_keywords": ["two weeks"],
       "should_decline": false
     },
     {
       "id": "q5",
-      "category": "partial",
-      "question": "What is the remote work policy for contractors?",
-      "expected_answer_contains": "not answered",
-      "expected_chunk_ids": ["REPLACE_WITH_REAL_CHUNK_ID"],
-      "should_decline": false,
-      "notes": "Handbook covers full-time employees only; a good answer states this gap explicitly per system prompt rule 3."
+      "category": "answerable",
+      "question": "How many vacation days do employees get after three years?",
+      "expected_keywords": ["20 vacation days"],
+      "should_decline": false
     },
     {
       "id": "q6",
       "category": "partial",
-      "question": "What health benefits are available to part-time employees?",
-      "expected_answer_contains": "not answered",
-      "expected_chunk_ids": ["REPLACE_WITH_REAL_CHUNK_ID"],
-      "should_decline": false
+      "question": "What is the remote work policy for contractors?",
+      "expected_keywords": ["contractors"],
+      "should_decline": false,
+      "notes": "Handbook explicitly excludes contractors from this policy; a good answer states that gap rather than guessing."
     },
     {
       "id": "q7",
-      "category": "unanswerable",
-      "question": "What is the company's policy on cryptocurrency compensation?",
-      "expected_answer_contains": null,
-      "expected_chunk_ids": [],
-      "should_decline": true
+      "category": "partial",
+      "question": "How many days per week can employees work remotely, and does this apply to vendors?",
+      "expected_keywords": ["three days per week"],
+      "should_decline": false
     },
     {
       "id": "q8",
       "category": "unanswerable",
-      "question": "Can employees bring pets to the office on weekends?",
-      "expected_answer_contains": null,
-      "expected_chunk_ids": [],
+      "question": "What is the company's policy on cryptocurrency compensation?",
+      "expected_keywords": [],
       "should_decline": true
     },
     {
       "id": "q9",
       "category": "unanswerable",
-      "question": "What is the maximum altitude for company drone use?",
-      "expected_answer_contains": null,
-      "expected_chunk_ids": [],
+      "question": "Can employees bring pets to the office on weekends?",
+      "expected_keywords": [],
       "should_decline": true
     },
     {
       "id": "q10",
       "category": "unanswerable",
       "question": "Does the company offer a four-day work week option?",
-      "expected_answer_contains": null,
-      "expected_chunk_ids": [],
+      "expected_keywords": [],
       "should_decline": true
     }
   ]
 }
+

@@ -2,7 +2,7 @@
 Metrics per BLUEPRINT.md §8:
 - Retrieval: Recall@5, MRR (computed both pre-rerank and post-rerank so the
   reranker's actual contribution is quantifiable -- see resume bullet #1).
-- Generation: Ragas faithfulness / answer_relevancy / context_precision.
+- Generation: Ragas faithfulness / answer_relevancy / context_relevancy.
 - Citation correctness: custom metric (not in Ragas) -- % of [Source N] citations
   whose cited chunk actually contains the claim.
 """
@@ -11,19 +11,28 @@ from ragas import evaluate
 from ragas.metrics import faithfulness, answer_relevancy, context_precision
 
 
-def recall_at_k(retrieved_chunk_ids: list[str], expected_chunk_ids: list[str]) -> float:
-    if not expected_chunk_ids:
+def recall_at_k(retrieved_texts: list[str], expected_keywords: list[str]) -> float:
+    """
+    retrieved_texts: text of the chunks actually retrieved for this question.
+    expected_keywords: phrases that should appear somewhere in a relevant chunk.
+    Matching is by content, not chunk_id, because chunk_ids are randomly generated
+    UUIDs that differ every time the corpus is re-ingested (e.g. a fresh database
+    in CI) -- content-based matching is portable across any environment.
+    """
+    if not expected_keywords:
         # Nothing to recall for unanswerable questions -- treat as trivially satisfied.
         return 1.0
-    hit = any(cid in retrieved_chunk_ids for cid in expected_chunk_ids)
+    combined = " ".join(retrieved_texts).lower()
+    hit = any(kw.lower() in combined for kw in expected_keywords)
     return 1.0 if hit else 0.0
 
 
-def mrr(retrieved_chunk_ids: list[str], expected_chunk_ids: list[str]) -> float:
-    if not expected_chunk_ids:
+def mrr(retrieved_texts: list[str], expected_keywords: list[str]) -> float:
+    if not expected_keywords:
         return 1.0
-    for rank, cid in enumerate(retrieved_chunk_ids, start=1):
-        if cid in expected_chunk_ids:
+    for rank, text in enumerate(retrieved_texts, start=1):
+        text_lower = text.lower()
+        if any(kw.lower() in text_lower for kw in expected_keywords):
             return 1.0 / rank
     return 0.0
 

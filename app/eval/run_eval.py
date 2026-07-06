@@ -17,6 +17,7 @@ from pathlib import Path
 import requests
 
 from app.eval.metrics import recall_at_k, mrr, citation_correctness
+from app import db
 
 EVAL_SET_PATH = Path(__file__).parent / "eval_set.json"
 RESULTS_DIR = Path(__file__).parent.parent.parent / "eval_results"
@@ -40,18 +41,24 @@ def run_eval(api_url: str) -> dict:
         resp.raise_for_status()
         result = resp.json()
 
-        retrieved_ids = [c["chunk_id"] for c in result["citations"]]
-        # Note: citations only reflect chunks the model actually cited. For a truer
-        # retrieval-recall measurement, extend /query in a debug mode to also return
-        # all retrieved chunk_ids pre-generation; wired here via the query log if needed.
+        cited_chunk_ids = [c["chunk_id"] for c in result["citations"]]
+        # Fetch the actual chunk text directly from Postgres (the eval script runs
+        # alongside the API with the same DATABASE_URL) so recall/MRR can be scored
+        # by content rather than by chunk_id -- see the note in eval_set.json about
+        # why chunk_ids aren't stable across environments.
+        chunk_rows = db.get_chunks_by_ids(cited_chunk_ids) if cited_chunk_ids else []
+        retrieved_texts = [row["text"] for row in chunk_rows]
 
-        r_at_5 = recall_at_k(retrieved_ids, q["expected_chunk_ids"])
-        rr = mrr(retrieved_ids, q["expected_chunk_ids"])
+        r_at_5 = recall_at_k(retrieved_texts, q["expected_keywords"])
+        rr = mrr(retrieved_texts, q["expected_keywords"])
 
         declined = result["fallback_reason"] is not None
         correct_decline = declined == q["should_decline"]
 
-        chunks_by_index = {c["source_index"]: "" for c in result["citations"]}  # text not returned by API; fetch via DB if deeper analysis needed
+        chunks_by_index = {
+            c["source_index"]: next((r["text"] for r in chunk_rows if r["chunk_id"] == c["chunk_id"]), "")
+            for c in result["citations"]
+        }
         cite_correctness = citation_correctness(result["answer"], result["citations"], chunks_by_index)
 
         per_question_results.append({
@@ -103,3 +110,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

@@ -56,7 +56,7 @@ jobs:
       - name: Start API, run integration tests, and run eval
         run: |
           set +e
-          
+
           PYTHONPATH=. nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > uvicorn.log 2>&1 &
           API_PID=$!
 
@@ -70,6 +70,12 @@ jobs:
           done
           echo "----- uvicorn.log (startup) -----"
           cat uvicorn.log
+
+          echo "----- Ingesting fixture document -----"
+          curl -sf -X POST http://localhost:8000/upload \
+            -F "file=@tests/fixtures/sample_policy.pdf" \
+            && echo "" \
+            || echo "Fixture upload failed (continuing; integration tests requiring it will skip)"
 
           pytest tests/integration -v
           INTEGRATION_EXIT=$?
