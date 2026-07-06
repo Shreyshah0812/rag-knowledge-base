@@ -5,6 +5,7 @@ rerank threshold, model choices) should be changeable without touching code, so 
 eval loop (app/eval/run_eval.py) can be used to sweep them and produce comparable,
 reproducible results.
 """
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +22,7 @@ class Settings(BaseSettings):
 
     # Qdrant
     qdrant_url: str = "http://localhost:6333"
+    qdrant_api_key: str = ""
     qdrant_collection: str = "rag_chunks"
 
     # Chunking
@@ -44,5 +46,12 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     raw_file_storage_dir: str = "/data/uploads"
 
+    @field_validator(
+        "openai_api_key", "anthropic_api_key", "cohere_api_key", "qdrant_api_key",
+        mode="after",
+    )
+    @classmethod
+    def strip_key_whitespace(cls, v: str) -> str:
+        return v.strip()
 
 settings = Settings()
