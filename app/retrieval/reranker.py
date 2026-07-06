@@ -6,6 +6,9 @@ sentence-transformers.CrossEncoder and drop it in here -- nothing else needs to 
 which is the point of keeping this behind one function.
 """
 import cohere
+from cohere.errors import TooManyRequestsError
+from tenacity import retry, wait_exponential, stop_after_attempt, retry_if_exception_type
+
 from app.config import settings
 
 _client = None
@@ -18,11 +21,20 @@ def get_client() -> cohere.Client:
     return _client
 
 
+@retry(
+    retry=retry_if_exception_type(TooManyRequestsError),
+    wait=wait_exponential(multiplier=2, min=2, max=30),
+    stop=stop_after_attempt(5),
+    reraise=True,
+)
 def rerank(query: str, candidates: list[dict]) -> list[dict]:
     """
     candidates: list of dicts with a 'text' key (chunk text) plus other metadata.
     Returns candidates re-ordered best-first, each with an added 'rerank_score' key
     (Cohere's relevance score, 0-1). Truncated to settings.rerank_top_k.
+
+    Retries with exponential backoff on 429 rate-limit errors -- relevant on a
+    Cohere trial key (10 calls/minute), but a real-world concern on paid tiers too.
     """
     if not candidates:
         return []
